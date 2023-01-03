@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
-const md5 = require('md5');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 const app = express();
 
@@ -50,9 +51,11 @@ app.get('/register', async function(req, res) {
 
 app.post('/register', async function(req, res) {
   try {
+    const hash = bcrypt.hashSync(req.body.password, saltRounds);
+
     const newUser = new User({
       email: req.body.username,
-      password: md5(req.body.password)
+      password: hash
     });
     await newUser.save();
     console.log('Sucessfully Added new User');
@@ -64,14 +67,16 @@ app.post('/register', async function(req, res) {
 
 app.post('/login', async function(req, res) {
   try {
+
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 
     const foundUser = await User.findOne({
       email: username
     });
     if (foundUser) {
-      if (foundUser.password === password) {
+      const match = bcrypt.compareSync(password, foundUser.password);
+      if (match) {
         res.render('secrets');
         console.log('Sucessfully login');
       } else {
